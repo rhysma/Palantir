@@ -14,8 +14,9 @@ const client = new Client({
 	],
 });
 
-const token = process.env['token'];
-const clientId = process.env['clientId'];
+//updates to these env variables since we have the prod and test bots running on the same server
+const token = process.env['ptoken'];
+const clientId = process.env['pclientId'];
 
 // Create command collection and array from commands folder
 let commands = [];
