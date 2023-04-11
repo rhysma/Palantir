@@ -58,9 +58,10 @@ module.exports = {
         if (username == userData?.redditUsername) {
             return interaction.editReply({content: "This is already this user's Reddit username!", ephemeral: true});
         }
-
+        
+        //checked if this wasn't null once again
         let existingUser = await userSchema.findOne({ redditUsername: username });
-        if (existingUser) {
+        if (existingUser != null) {
             return interaction.editReply({content: "Someone already has this username! Contact a mod if this is an issue.", ephemeral: true});
         }
             

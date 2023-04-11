@@ -13,8 +13,9 @@ module.exports = async (interaction, client) => {
         return interaction.editReply({content: "You've already set your Reddit username!", ephemeral: true});
     }
 
+    //changed the if statment to check if existing user isn't null because findone returns null if a match isn't found
     let existingUser = await userSchema.findOne({ redditUsername: username });
-    if (existingUser) {
+    if (existingUser != null) {
         return interaction.editReply({content: "Someone already has this username! Contact a mod if this is an issue.", ephemeral: true});
     }
     
