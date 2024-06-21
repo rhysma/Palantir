@@ -13,3 +13,13 @@ Moderators can change a user's associated reddit username
 
 ### Track Name Changes
 Palantir also tracks discord handle changes. Once a logging channel has been set up and configured, Palantir will inform this channel of changes to usernames so you will always know who is who in your server. 
+
+# Valinor
+
+## Description
+A bot that fetches the accepted member list from a private subreddit and stores it in a MongoDB collection. Support's Palantir's ability to determine if a discord member is also a member of a particular private subreddit. 
+
+
+
+
+
