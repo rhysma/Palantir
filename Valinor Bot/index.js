@@ -1,10 +1,10 @@
 const snoowrap = require('snoowrap');
 const cron = require('node-cron');
+const { MongoClient } = require('mongodb');
 
 require("dotenv").config();
-const mongoose = require('mongoose');
-const token = process.env['token'];
-const clientId = process.env['clientId'];
+const token = process.env['valinor_token'];
+const clientId = process.env['valinor_clientID'];
 const username = process.env['reddit_username'];
 const password = process.env['reddit_password'];
 
@@ -19,14 +19,15 @@ const r = new snoowrap({
 
 
 // MongoDB Atlas connection
-const client = new MongoClient(process.env['mongoURL'], { useNewUrlParser: true, useUnifiedTopology: true });
+const uri = process.env['mongoURL'];
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-const subredditName = 'Luxelife';
+const subredditName = 'LuxeLife';
 
 async function fetchMembersAndStore() {
   try {
     await client.connect();
-    const database = client.db('palantir');
+    const database = client.db('discord');
     const collection = database.collection('luxelife_users');
 
     const subreddit = await r.getSubreddit(subredditName);
