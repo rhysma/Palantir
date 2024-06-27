@@ -8,10 +8,9 @@ const { EmbedBuilder } = require('discord.js');
 const request = require('request-promise');
 const userSchema = require('../../models/userSchema.js');
 const dotenv = require('dotenv');  // Import dotenv
-const redditUserSchema = require('../../models/redditUserSchema.js');
 
 dotenv.config();
-let redditStatus = "";
+
 let accessToken = process.env.access_token;
 
 function formatTimeDifference(date1, date2) {
@@ -46,9 +45,7 @@ module.exports = async (interaction) => {
     let user = interaction.options.getUser('user');
     let userData = await userSchema.findOne({userId: user.id});
     
-    if (!userData?.redditUsername) 
-    {
-        console.log(`${user} has not linked their Reddit username!`);
+    if (!userData?.redditUsername) {
         return await interaction.editReply({content: `${user} has not linked their Reddit username!`, ephemeral: true});
     }
 
@@ -70,19 +67,18 @@ module.exports = async (interaction) => {
             // Access token expired, refresh it
             try 
             {
-                const clientId = process.env['clientId'];
-                const clientSecret = process.env['token'];
+                const clientId = 'cD0dcoWi_FEfUu309W0lGQ';
+                const clientSecret = 'XONEmbCJuOgdtxzlO6K7DkwOkyhFPg';
 
                 const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
                 const data = 'grant_type=client_credentials';
 
-                axios.post('https://www.reddit.com/api/v1/access_token', data, 
-                {
-                    headers: {
-                        'Authorization': `Basic ${authString}`,
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        },
+                axios.post('https://www.reddit.com/api/v1/access_token', data, {
+                headers: {
+                    'Authorization': `Basic ${authString}`,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    },
                 })
             .then(response => 
                 {
@@ -96,7 +92,7 @@ module.exports = async (interaction) => {
             .catch(error => 
                 {
                     console.error('Error:', error.response ? error.response.data : error.message);
-                    console.log(error.message);  
+
                     return interaction.editReply({content: `*${user.tag}* has set their Reddit username as *${userData.redditUsername}*, but their
                     Reddit profile could not be found.`, ephemeral: true});
      
@@ -112,6 +108,7 @@ module.exports = async (interaction) => {
                     });
                 redditData = JSON.parse(newBody).data;
                 // Update the token value
+
                 console.log("New data fetched successfully:", redditData);
 
             } 
@@ -131,23 +128,6 @@ module.exports = async (interaction) => {
         }
     }
 
-
-    //see if the user can be found in the subreddit user's list
-    let redditUserData = await redditUserSchema.findOne({ username: redditData.subreddit.public_description }); 
-    console.log(redditUserData);
-
-    if (!redditUserData) 
-    {
-        redditStatus = "User is NOT a member of the LuxeLife subreddit";
-        console.log("User is NOT a member of the LuxeLife subreddit")
-    }
-    else
-    {
-        redditStatus = "User is a member of the LuxeLife subreddit";
-        console.log("User is a member of the LuxeLife subreddit")
-    }
-
-
     let dateCreated = new Date(redditData.created_utc * 1000);
     const months = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'June', 'July', 'Aug.', 'Sept.', 'Oct.', 'Nov.', 'Dec.'];
     let formattedDate = `${months[dateCreated.getMonth()]} ${dateCreated.getDate()}, ${dateCreated.getFullYear()}`;
@@ -163,13 +143,12 @@ module.exports = async (interaction) => {
             .addFields([
                 {
                     name: (redditData.subreddit.title.length) ? redditData.subreddit.title : redditData.name, 
-                    name: `${redditStatus}`, 
                     value: `${(redditData.subreddit.public_description.length) ? `*"${redditData.subreddit.public_description}"*\n` : ''}
-                        \u2b50 **${redditData.total_karma}** karma` , inline: true },
+                         **${redditData.total_karma}** karma`, inline: true },
             ])
             .setThumbnail(redditData.subreddit.icon_img.split('?')[0])
             .setColor('#ff5700')
-            .setFooter({text: `Account created ${formattedDate} \n${formatTimeDifference(dateCreated, new Date())} ago`})
+            .setFooter({text: ` Account created ${formattedDate} \n${formatTimeDifference(dateCreated, new Date())} ago`})
         ],
         ephemeral: true
     });

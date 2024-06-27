@@ -24,14 +24,40 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 const subredditName = 'LuxeLife';
 
+// Function to delay execution to respect rate limits
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Function to fetch all contributors with pagination and rate limit handling
+async function fetchAllContributors(subredditName) {
+  const subreddit = await r.getSubreddit(subredditName);
+  let contributors = [];
+  let after = null;
+
+  do {
+    const result = await subreddit.getContributors({ limit: 100, after });
+    contributors = contributors.concat(result);
+    after = result.length === 100 ? result[result.length - 1].name : null;
+    
+    // Respect rate limits by adding a delay
+    if (after) {
+      console.log(`Fetched ${contributors.length} contributors so far...`);
+      await delay(2000); // Adjust delay as needed
+    }
+  } while (after);
+
+  return contributors;
+}
+
+
 async function fetchMembersAndStore() {
   try {
     await client.connect();
     const database = client.db('discord');
     const collection = database.collection('luxelife_users');
 
-    const subreddit = await r.getSubreddit(subredditName);
-    const contributors = await subreddit.getContributors();
+    const contributors = await fetchAllContributors(subredditName);
 
     for (const contributor of contributors) {
       const userData = {
@@ -48,6 +74,7 @@ async function fetchMembersAndStore() {
     await client.close();
   }
 }
+
 
 // Schedule the task to run daily at midnight
 cron.schedule('0 0 * * *', () => {

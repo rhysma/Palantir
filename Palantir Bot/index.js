@@ -65,3 +65,5 @@ mongoose.set('strictQuery', false);
 	client.once('ready', () => console.log(`\nPalantir is now online! ${new Date().toLocaleString()}\n`));
 	client.login(token);
 })();
+
+
