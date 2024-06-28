@@ -17,61 +17,80 @@ const r = new snoowrap({
   password: password
 });
 
-
 // MongoDB Atlas connection
 const uri = process.env['mongoURL'];
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 const subredditName = 'LuxeLife';
 
+// Function to connect to MongoDB
+async function connectToMongo() {
+  if (!client.isConnected) { 
+    await client.connect();
+  }
+  const db = client.db('discord');
+  return db.collection('luxelife_users');
+}
+
 // Function to delay execution to respect rate limits
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Function to fetch all contributors with pagination and rate limit handling
-async function fetchAllContributors(subredditName) {
+// Function to fetch all contributors with pagination and update MongoDB incrementally
+async function fetchAndStoreContributors(subredditName) {
   const subreddit = await r.getSubreddit(subredditName);
-  let contributors = [];
   let after = null;
+  let attempts = 0;
+  const maxAttempts = 5; // Define a maximum number of retry attempts
+  const collection = await connectToMongo();
 
   do {
-    const result = await subreddit.getContributors({ limit: 100, after });
-    contributors = contributors.concat(result);
-    after = result.length === 100 ? result[result.length - 1].name : null;
-    
-    // Respect rate limits by adding a delay
-    if (after) {
-      console.log(`Fetched ${contributors.length} contributors so far...`);
-      await delay(2000); // Adjust delay as needed
+    try {
+      const result = await subreddit.getContributors({ limit: 100, after });
+      if (result.length === 0) {
+        break;
+      }
+      after = result[result.length - 1].name;
+      console.log(`Fetched ${result.length} contributors in this batch...`);
+
+      // Print usernames in a comma-separated list
+      const usernames = result.map(contributor => contributor.name).join(', ');
+      console.log(`Usernames: ${usernames}`);
+
+      // Update MongoDB incrementally
+      for (const contributor of result) {
+        const userData = {
+          username: contributor.name,
+          date_joined: new Date(), // Adjust based on available data
+        };
+        await collection.updateOne({ username: contributor.name }, { $set: userData }, { upsert: true });
+      }
+
+      console.log(`Updated ${result.length} contributors in MongoDB.`);
+      await delay(2000); // Add delay between requests to respect rate limits
+      attempts = 0; // Reset attempts counter after a successful request
+    } catch (error) {
+      console.error('Error fetching contributors:', error.message);
+      if (++attempts >= maxAttempts) {
+        console.error('Maximum retry attempts reached. Exiting...');
+        break;
+      }
+      console.log(`Retrying... (${attempts}/${maxAttempts})`);
+      await delay(5000); // Wait longer before retrying
     }
   } while (after);
 
-  return contributors;
+  await client.close();
 }
 
 
 async function fetchMembersAndStore() {
   try {
-    await client.connect();
-    const database = client.db('discord');
-    const collection = database.collection('luxelife_users');
-
-    const contributors = await fetchAllContributors(subredditName);
-
-    for (const contributor of contributors) {
-      const userData = {
-        username: contributor.name,
-        date_joined: new Date(), // Adjust based on available data
-      };
-      await collection.updateOne({ username: contributor.name }, { $set: userData }, { upsert: true });
-    }
-
+    await fetchAndStoreContributors(subredditName); // Replace with your subreddit name
     console.log('Member list updated in MongoDB.');
   } catch (err) {
-    console.error(err);
-  } finally {
-    await client.close();
+    console.error('Error:', err.message);
   }
 }
 
