@@ -5,12 +5,29 @@ const request = require('request-promise');
 const fs = require('fs');
 const dotenv = require('dotenv');  // Import dotenv
 const userSchema = require('../../models/userSchema.js');
-const redditUserSchema = require('../../models/redditUserSchema.js');
+//const redditUserSchema = require('../../models/redditUserSchema.js');
+const { MongoClient } = require('mongodb');
+
+// MongoDB Atlas connection
+const uri = process.env['mongoURL'];
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
 
 require('dotenv').config({ path: path.resolve(__dirname, '/home/ubuntu/discord_bot/Palantir/.env') });
 
 let redditStatus = "";
 let accessToken = process.env.access_token;
+
+// Function to connect to MongoDB
+async function connectToMongo() {
+    if (!client.isConnected) { 
+      await client.connect();
+    }
+    const db = client.db('discord');
+    return db.collection('luxelife_users');
+
+  }
+
 console.log('Initial Access Token:', accessToken);
 
 function formatTimeDifference(date1, date2) {
@@ -102,27 +119,41 @@ async function getRedditUserData(redditUsername) {
 
 module.exports = async (interaction) => {
     await interaction.deferReply({ ephemeral: true });
-    let user = interaction.options.getUser('user');
-    let userData = await userSchema.findOne({ userId: user.id });
 
+    let user = interaction.options.getUser('user');
+
+    let userData = await userSchema.findOne({ userId: user.id });
+   
     if (!userData?.redditUsername) {
         console.log(`${user} has not linked their Reddit username!`);
         return await interaction.editReply({ content: `${user} has not linked their Reddit username!`, ephemeral: true });
     }
 
     try {
+        const redditUsername = userData.redditUsername;
+        console.log("Reddit Username:", redditUsername);
+
         const redditData = await getRedditUserData(userData.redditUsername);
+        console.log(`Checking if username ${redditUsername} is in the database...`);
 
-        // Check if the user is in the subreddit user's list
-        let redditUserData = await redditUserSchema.findOne({ username: redditData.subreddit.public_description });
-        console.log(redditUserData);
+        const collection = await connectToMongo();
 
-        if (!redditUserData) {
-            redditStatus = "User is NOT a member of the LuxeLife subreddit";
+        let redditUserData = await collection.findOne({ username: new RegExp(`^${redditUsername}$`, 'i') });
+
+        console.log("Database query result:", redditUserData);
+
+
+        if (!redditUserData) 
+        {
+            redditStatus = "\u274c  User is NOT a member of the LuxeLife subreddit";
             console.log("User is NOT a member of the LuxeLife subreddit");
-        } else {
-            redditStatus = "User is a member of the LuxeLife subreddit";
+
+        } 
+        else 
+        {
+            redditStatus = "\u2705  User is a member of the LuxeLife subreddit";
             console.log("User is a member of the LuxeLife subreddit");
+
         }
 
         let dateCreated = new Date(redditData.created_utc * 1000);

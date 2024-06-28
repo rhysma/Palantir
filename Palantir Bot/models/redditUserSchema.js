@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const redditUserSchema = new mongoose.Schema(
     {
-        username: {type: String, require: true, unique: true},
+        username: {type: String, required: true, unique: true},
         date_joined: {type: Date, unique: false}
     },
     {
@@ -10,4 +10,4 @@ const redditUserSchema = new mongoose.Schema(
     }
 );
 
-module.exports = mongoose.model('RedditUserModels', redditUserSchema,);
+module.exports = mongoose.model('RedditUserModels', redditUserSchema);
