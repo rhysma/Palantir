@@ -14,8 +14,8 @@ const client = new Client({
 	],
 });
 
-const token = process.env['token'];
-const clientId = process.env['clientId'];
+const token = process.env.token;
+const clientId = process.env.clientId;
 
 // Create command collection and array from commands folder
 let commands = [];
@@ -55,7 +55,7 @@ const rest = new REST({ version: '10' }).setToken(token);
 // Connect to MongoDB for server and user database
 mongoose.set('strictQuery', false);
 (async () => {
-	await mongoose.connect(process.env['mongoURL'], {
+	await mongoose.connect(process.env.mongoURL, {
 		socketTimeoutMS: 100000,
 		keepAlive: true,
 	})

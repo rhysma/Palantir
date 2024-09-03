@@ -12,8 +12,8 @@ const { MongoClient } = require('mongodb');
 const uri = process.env['mongoURL'];
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-
-require('dotenv').config({ path: path.resolve(__dirname, '/home/ubuntu/discord_bot/Palantir/.env') });
+require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '.env.token') });
 
 let redditStatus = "";
 let accessToken = process.env.access_token;
@@ -75,7 +75,7 @@ async function refreshAccessToken() {
         console.log('New Access Token:', accessToken);
 
         // Update .env file
-        fs.writeFileSync('/home/ubuntu/discord_bot/Palantir/.env', `ACCESS_TOKEN=${accessToken}\n`, { flag: 'w' });
+        fs.writeFileSync('.env.token', `ACCESS_TOKEN=${accessToken}\n`, { flag: 'w' });
         console.log('Token updated successfully!');
         return accessToken;
     } catch (error) {
@@ -95,7 +95,7 @@ async function getRedditUserData(redditUsername) {
         });
         return JSON.parse(body).data;
     } catch (err) {
-        if (err.statusCode === 401) {
+        if (err.statusCode === 403) {
             // Access token expired, refresh it
             accessToken = await refreshAccessToken();
             console.log('New Access Token:', accessToken);
