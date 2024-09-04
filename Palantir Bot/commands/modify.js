@@ -1,7 +1,16 @@
+const path = require('path');
+const axios = require('axios');
+const fs = require('fs');
+const dotenv = require('dotenv');  // Import dotenv
+
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const request = require('request-promise');
 const serverSchema = require('../models/serverSchema.js');
 const userSchema = require('../models/userSchema.js');
+
+require('dotenv').config();
+let buffer = fs.readFileSync(".env.token");
+let config = dotenv.parse(buffer)
 
 function formatTimeDifference(date1, date2) {
     let years = date2.getYear() - date1.getYear();
@@ -26,6 +35,33 @@ function formatTimeDifference(date1, date2) {
     if (result.length == 3) return `${result[0]}, ${result[1]} and ${result[2]}`;
     if (result.length == 2) return `${result[0]} and ${result[1]}`;
     return result[0];
+}
+
+async function refreshAccessToken() {
+    const clientId = process.env.CLIENT_ID;
+    const clientSecret = process.env.CLIENT_SECRET;
+
+    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const data = 'grant_type=client_credentials';
+
+    try {
+        const response = await axios.post('https://www.reddit.com/api/v1/access_token', data, {
+            headers: {
+                'Authorization': `Basic ${authString}`,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+        });
+        accessToken = response.data.access_token;
+        console.log('New Access Token:', accessToken);
+
+        // Update .env file
+        fs.writeFileSync('.env.token', `ACCESS_TOKEN=${accessToken}\n`, { flag: 'w' });
+        console.log('Token updated successfully!');
+        return accessToken;
+    } catch (error) {
+        console.error('Error refreshing access token:', error.response ? error.response.data : error.message);
+        throw new Error('Failed to refresh access token');
+    }
 }
 
 module.exports = {
@@ -54,7 +90,9 @@ module.exports = {
         const username = interaction.options.getString('username').toLowerCase().replace('u/','');
         let userData = await userSchema.findOne({userId: user.id});
         let serverData = await serverSchema.findOne({guildId: interaction.guild.id});
-    
+        
+        let accessToken = config.ACCESS_TOKEN;
+
         if (username == userData?.redditUsername) {
             return interaction.editReply({content: "This is already this user's Reddit username!", ephemeral: true});
         }
@@ -67,15 +105,35 @@ module.exports = {
         let redditData;
         try {
             let body = await request({
-                url: `https://www.reddit.com/user/${username}/about.json`,
+                url: `https://oauth.reddit.com/user/${username}/about.json`,
                 headers: {
-                    'User-Agent': 'PALANTIR-DISCORD-BOT'
+                    'User-Agent': 'PALANTIR-DISCORD-BOT',
+                    'Authorization': `Bearer ${accessToken}`,
                 }
             });
             redditData = JSON.parse(body).data;
         }
         catch(err) {
-            return interaction.editReply({content: "This Reddit profile doesn't exist!", ephemeral: true});
+            if (err.statusCode === 403) {
+                // Access token expired, refresh it
+                accessToken = await refreshAccessToken();
+    
+                // Retry the original request with the new token
+                try {
+                    let body = await request({
+                        url: `https://oauth.reddit.com/user/${username}/about.json`,
+                        headers: {
+                            'User-Agent': 'PALANTIR-DISCORD-BOT',
+                            'Authorization': `Bearer ${accessToken}`,
+                        }
+                    });
+                    redditData = JSON.parse(body).data;
+                } catch(err2) {
+                    return interaction.editReply({content: "This Reddit profile doesn't exist!", ephemeral: true});
+                }
+            } else {
+                return interaction.editReply({content: "This Reddit profile doesn't exist!", ephemeral: true});
+            }
         }
 
         let dateCreated = new Date(redditData.created_utc * 1000);
