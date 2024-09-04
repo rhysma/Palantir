@@ -9,7 +9,7 @@ const userSchema = require('../../models/userSchema.js');
 const { MongoClient } = require('mongodb');
 
 // MongoDB Atlas connection
-const uri = process.env['mongoURL'];
+const uri = process.env.mongoURL;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 require('dotenv').config();
