@@ -13,10 +13,11 @@ const uri = process.env.mongoURL;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 require('dotenv').config();
-require('dotenv').config({ path: path.resolve(__dirname, '.env.token') });
+let buffer = fs.readFileSync(".env.token");
+let config = dotenv.parse(buffer)
 
 let redditStatus = "";
-let accessToken = process.env.access_token;
+let accessToken = config.ACCESS_TOKEN;
 
 // Function to connect to MongoDB
 async function connectToMongo() {
