@@ -114,7 +114,7 @@ module.exports = {
             redditData = JSON.parse(body).data;
         }
         catch(err) {
-            if (err.statusCode === 403) {
+            if (err.statusCode === 403 || err.statusCode === 401) {
                 // Access token expired, refresh it
                 accessToken = await refreshAccessToken();
     
