@@ -17,7 +17,6 @@ module.exports = async (interaction, client) => {
     let userData = await userSchema.findOne({userId: interaction.user.id});
     let serverData = await serverSchema.findOne({guildId: interaction.guild?.id});
 
-    let accessToken = config.ACCESS_TOKEN;
     if (username == userData?.redditUsername) {
         return interaction.editReply({content: "You've already set your Reddit username!", ephemeral: true});
     }

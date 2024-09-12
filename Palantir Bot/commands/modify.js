@@ -63,8 +63,6 @@ module.exports = {
         let userData = await userSchema.findOne({userId: user.id});
         let serverData = await serverSchema.findOne({guildId: interaction.guild.id});
         
-        let accessToken = config.ACCESS_TOKEN;
-
         if (username == userData?.redditUsername) {
             return interaction.editReply({content: "This is already this user's Reddit username!", ephemeral: true});
         }

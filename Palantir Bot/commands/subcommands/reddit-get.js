@@ -27,8 +27,6 @@ async function connectToMongo() {
 
   }
 
-console.log('Initial Access Token:', accessToken);
-
 function formatTimeDifference(date1, date2) {
     let years = date2.getYear() - date1.getYear();
     let months = date2.getMonth() - date1.getMonth();

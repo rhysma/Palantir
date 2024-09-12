@@ -37,6 +37,7 @@ async function refreshAccessToken() {
 }
 
 module.exports = async (username, interaction) => {
+    console.log('Initial Access Token:', accessToken);
     try {
         const body = await request({
             url: `https://oauth.reddit.com/user/${username}/about.json`,
