@@ -7,17 +7,15 @@ const dotenv = require('dotenv');  // Import dotenv
 const userSchema = require('../../models/userSchema.js');
 //const redditUserSchema = require('../../models/redditUserSchema.js');
 const { MongoClient } = require('mongodb');
+const redditUserCheck = require('../../functions/reddit-user-check.js');
 
 // MongoDB Atlas connection
 const uri = process.env.mongoURL;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 require('dotenv').config();
-let buffer = fs.readFileSync(".env.token");
-let config = dotenv.parse(buffer)
 
 let redditStatus = "";
-let accessToken = config.ACCESS_TOKEN;
 
 // Function to connect to MongoDB
 async function connectToMongo() {
@@ -58,66 +56,6 @@ let days = date2.getDate() - date1.getDate();
     return result[0];
 }
 
-async function refreshAccessToken() {
-    const clientId = process.env.CLIENT_ID;
-    const clientSecret = process.env.CLIENT_SECRET;
-
-    const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const data = 'grant_type=client_credentials';
-
-    try {
-        const response = await axios.post('https://www.reddit.com/api/v1/access_token', data, {
-            headers: {
-                'Authorization': `Basic ${authString}`,
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-        });
-        accessToken = response.data.access_token;
-        console.log('New Access Token:', accessToken);
-
-        // Update .env file
-        fs.writeFileSync('.env.token', `ACCESS_TOKEN=${accessToken}\n`, { flag: 'w' });
-        console.log('Token updated successfully!');
-        return accessToken;
-    } catch (error) {
-        console.error('Error refreshing access token:', error.response ? error.response.data : error.message);
-        throw new Error('Failed to refresh access token');
-    }
-}
-
-async function getRedditUserData(redditUsername) {
-    try {
-        const body = await request({
-            url: `https://oauth.reddit.com/user/${redditUsername}/about.json`,
-            headers: {
-                'User-Agent': 'PALANTIR-DISCORD-BOT',
-                'Authorization': `Bearer ${accessToken}`,
-            },
-        });
-        return JSON.parse(body).data;
-    } catch (err) {
-        if (err.statusCode === 403 || err.statusCode === 401) {
-            // Access token expired, refresh it
-            accessToken = await refreshAccessToken();
-            console.log('New Access Token:', accessToken);
-
-            // Retry the original request with the new token
-            const body = await request({
-                url: `https://oauth.reddit.com/user/${redditUsername}/about.json`,
-                headers: {
-                    'User-Agent': 'PALANTIR-DISCORD-BOT',
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-            return JSON.parse(body).data;
-        } else {
-            const errorMessage = err.response?.data || err.message;
-            console.error(`Error checking Reddit profile: ${errorMessage}`);
-            throw new Error(`Failed to fetch Reddit profile for ${redditUsername}`);
-        }
-    }
-}
-
 module.exports = async (interaction) => {
     await interaction.deferReply({ ephemeral: true });
 
@@ -134,7 +72,15 @@ module.exports = async (interaction) => {
         const redditUsername = userData.redditUsername;
         console.log("Reddit Username:", redditUsername);
 
-        const redditData = await getRedditUserData(userData.redditUsername);
+        let redditData;
+        try {
+            redditData = await redditUserCheck(redditUsername, interaction);
+        } catch (err) {
+            return err.message;
+        } 
+
+
+
         console.log(`Checking if username ${redditUsername} is in the database...`);
 
         const collection = await connectToMongo();
