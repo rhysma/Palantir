@@ -1,19 +1,4 @@
 const { EmbedBuilder } = require('discord.js');
-const { MongoClient } = require('mongodb');
-const dotenv = require('dotenv');  // Import dotenv
-
-require('dotenv').config();
-
-const uri = process.env.mongoURL;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-
-async function connectToMongo() {
-    if (!client.isConnected) { 
-      await client.connect();
-    }
-    const db = client.db('discord');
-    return db.collection('luxelife_users');
-}
 
 function formatTimeDifference(date1, date2) {
     let years = date2.getYear() - date1.getYear();
@@ -42,14 +27,9 @@ function formatTimeDifference(date1, date2) {
     return result[0];
 }
 
-module.exports = async (user, redditData, redditUsername) => {
+module.exports = async (user, redditData, membership) => {
 
-    console.log(`Checking if username ${redditUsername} is in the database...`);
-    const collection = await connectToMongo();
-    let redditUserData = await collection.findOne({ username: new RegExp(`^${redditUsername}$`, 'i') });
-    console.log("Database query result:", redditUserData);
-
-    if (!redditUserData) 
+    if (!membership) 
     {
         redditStatus = "\u274c  User is NOT a member of the LuxeLife subreddit";
         console.log("User is NOT a member of the LuxeLife subreddit");

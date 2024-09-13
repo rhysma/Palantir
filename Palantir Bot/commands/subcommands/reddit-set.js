@@ -8,6 +8,7 @@ const request = require('request-promise');
 const serverSchema = require('../../models/serverSchema.js');
 const userSchema = require('../../models/userSchema.js');
 const redditUserCheck = require('../../functions/reddit-user-check.js');
+const checkRedditMembership = require('../../functions/checkRedditMembership.js');
 
 require('dotenv').config();
 
@@ -39,7 +40,8 @@ module.exports = async (interaction, client) => {
     } 
 
 
-    console.log(serverData.redditRole)
+    // check user's membership in reddit
+    let redditMembership = await checkRedditMembership(userData.redditUsername);
 
     // build return messages
     let logMessage;
@@ -57,12 +59,14 @@ module.exports = async (interaction, client) => {
             redditUsername: username
         });
         console.log(`Created new user schema: ${interaction.user.tag}`);
-        /*
-        if (serverData?.redditRole) {
-            interaction.member?.roles.add(serverData.redditRole);
-        }
-        */
     }
+
+    // set user role for access
+    /*
+    if (serverData?.redditRole && redditMembership && redditData.total_karma >= 100) {
+        interaction.member?.roles.add(serverData.redditRole);
+    }
+    */
 
     // save userdata to database
     userData.save();

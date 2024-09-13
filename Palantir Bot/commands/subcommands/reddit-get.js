@@ -9,6 +9,7 @@ const userSchema = require('../../models/userSchema.js');
 const { MongoClient } = require('mongodb');
 const redditUserCheck = require('../../functions/reddit-user-check.js');
 const embedBuilder = require('../../functions/embedBuilder.js');
+const checkRedditMembership = require('../../functions/checkRedditMembership.js');
 
 // MongoDB Atlas connection
 const uri = process.env.mongoURL;
@@ -41,8 +42,11 @@ module.exports = async (interaction) => {
             return err.message;
         }
 
+        // check user's membership in reddit
+        let redditMembership = await checkRedditMembership(userData.redditUsername);
+
         // build embed
-        let embed = await embedBuilder(user, redditData, userData.redditUsername);
+        let embed = await embedBuilder(user, redditData, redditMembership);
 
         // build return message
         interaction.editReply({
