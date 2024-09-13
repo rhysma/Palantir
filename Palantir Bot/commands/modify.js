@@ -34,20 +34,24 @@ module.exports = {
         await interaction.deferReply({ephemeral: true});
         if (!interaction.guild) return interaction.editReply("Can only run this in a server!");
 
+        // setup variables
         const user = interaction.options.getUser('user');
         const username = interaction.options.getString('username').toLowerCase().replace('u/','');
         let userData = await userSchema.findOne({userId: user.id});
         let serverData = await serverSchema.findOne({guildId: interaction.guild.id});
         
+        // check if username is already set to the same
         if (username == userData?.redditUsername) {
             return interaction.editReply({content: "This is already this user's Reddit username!", ephemeral: true});
         }
 
+        // check if username is in user by others
         let existingUser = await userSchema.findOne({ redditUsername: username });
         if (existingUser) {
             return interaction.editReply({content: "Someone already has this username! Contact a mod if this is an issue.", ephemeral: true});
         }
-            
+        
+        // grab userdata from reddit api
         let redditData;
         try {
             redditData = await redditUserCheck(username, interaction);
@@ -55,9 +59,10 @@ module.exports = {
             return err.message;
         } 
 
+
         let embed = await embedBuilder(user, redditData, userData.redditUsername);
 
-
+        // build return messages
         let logMessage;
         if (userData?.redditUsername) {
             interaction.editReply({
@@ -83,15 +88,17 @@ module.exports = {
             console.log(`Created new user schema: ${user.tag}`);
         
             let serverData = await serverSchema.findOne({guildId: interaction.guild.id});
+            /*
             if (serverData?.redditRole) {
-                let member = interaction.guild.members.cache.get(user.id);
-                member?.roles.add(serverData.redditRole);
+                interaction.member?.roles.add(serverData.redditRole);
             }
+            */
         }
 
+        // save userdata to database
         userData.save();
         
-
+        // log changes to log channel
         if (!serverData?.logChannelId) return;
         const guild = await client.guilds.cache.get(interaction.guild.id);
         const channel = await guild.channels.fetch(serverData.logChannelId);

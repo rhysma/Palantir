@@ -13,19 +13,24 @@ require('dotenv').config();
 
 module.exports = async (interaction, client) => {
     await interaction.deferReply({ ephemeral: true });
+    
+    // // setup variables
     let username = interaction.options.getString('username').toLowerCase().replace('u/','');
     let userData = await userSchema.findOne({userId: interaction.user.id});
     let serverData = await serverSchema.findOne({guildId: interaction.guild?.id});
 
+    // check if username is already set to the same
     if (username == userData?.redditUsername) {
-        return interaction.editReply({content: "You've already set your Reddit username!", ephemeral: true});
+        return interaction.editReply({content: `Your username is already set to ${username}!`, ephemeral: true});
     }
 
+    // check if username is in user by others
     let existingUser = await userSchema.findOne({ redditUsername: username });
     if (existingUser) {
         return interaction.editReply({content: "Someone already has this username! Contact a mod if this is an issue.", ephemeral: true});
     }
     
+    // grab userdata from reddit api
     let redditData;
     try {
         redditData = await redditUserCheck(username, interaction);
@@ -34,9 +39,9 @@ module.exports = async (interaction, client) => {
     } 
 
 
+    console.log(serverData.redditRole)
 
-
-
+    // build return messages
     let logMessage;
     if (userData?.redditUsername) {
         interaction.editReply({content: `Changed your Reddit username from **u/${userData.redditUsername}** to **u/${username}**`, ephemeral: true});
@@ -52,14 +57,17 @@ module.exports = async (interaction, client) => {
             redditUsername: username
         });
         console.log(`Created new user schema: ${interaction.user.tag}`);
-    
+        /*
         if (serverData?.redditRole) {
             interaction.member?.roles.add(serverData.redditRole);
         }
+        */
     }
 
+    // save userdata to database
     userData.save();
 
+    // log changes to log channel
     if (!serverData?.logChannelId) return;
     const guild = await client.guilds.cache.get(interaction.guild.id);
     const channel = await guild.channels.fetch(serverData.logChannelId);

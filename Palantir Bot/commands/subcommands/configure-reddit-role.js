@@ -23,6 +23,7 @@ module.exports = async (interaction) => {
     await serverData.save();
 
     let server = interaction.guild;
+    /*
     userSchema.find({}, (err, users) => {
         if (err) return console.log(err);
 
@@ -39,6 +40,6 @@ module.exports = async (interaction) => {
             }
         });
     });
-
+    */
     await interaction.editReply({content: `All set! Users who link their Reddit will now have the ${role} role`});
 }
