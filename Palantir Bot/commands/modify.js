@@ -8,33 +8,9 @@ const request = require('request-promise');
 const serverSchema = require('../models/serverSchema.js');
 const userSchema = require('../models/userSchema.js');
 const redditUserCheck = require('../functions/reddit-user-check.js');
+const embedBuilder = require('../functions/embedBuilder.js');
 
 require('dotenv').config();
-
-function formatTimeDifference(date1, date2) {
-    let years = date2.getYear() - date1.getYear();
-    let months = date2.getMonth() - date1.getMonth();
-	let days = date2.getDate() - date1.getDate();
-  
-	if (days < 0) {
-        days += 31;
-  		months--;
-    }
-
-    if (months < 0) {
-        months += 12;
-        years--;
-    }
-
-    let result = [];
-    if (years) result.push(`${years} year${(years > 1) ? 's' : ''}`);
-    if (months) result.push(`${months} month${(months > 1) ? 's' : ''}`);
-    if (days) result.push(`${days} day${(days > 1) ? 's' : ''}`);
-
-    if (result.length == 3) return `${result[0]}, ${result[1]} and ${result[2]}`;
-    if (result.length == 2) return `${result[0]} and ${result[1]}`;
-    return result[0];
-}
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -79,33 +55,15 @@ module.exports = {
             return err.message;
         } 
 
-        let dateCreated = new Date(redditData.created_utc * 1000);
-        const months = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'June', 'July', 'Aug.', 'Sept.', 'Oct.', 'Nov.', 'Dec.'];
-        let formattedDate = `${months[dateCreated.getMonth()]} ${dateCreated.getDate()}, ${dateCreated.getFullYear()}`;
-
-        let embed = new EmbedBuilder()
-            .setAuthor({
-                name: `${user.tag}'s Reddit profile`, 
-                iconURL: user.displayAvatarURL()
-            })
-            .setTitle(redditData.subreddit.display_name_prefixed)
-            .setURL(`https://reddit.com${redditData.subreddit.url}`)
-            .addFields([
-                {
-                    name: (redditData.subreddit.title.length) ? redditData.subreddit.title : redditData.name, 
-                    value: `${(redditData.subreddit.public_description.length) ? `*"${redditData.subreddit.public_description}"*\n` : ''}
-                        🌟 **${redditData.total_karma}** karma`, inline: true },
-            ])
-            .setThumbnail(redditData.subreddit.icon_img.split('?')[0])
-            .setColor('#ff5700')
-            .setFooter({text: `🍰 Account created ${formattedDate} \n${formatTimeDifference(dateCreated, new Date())} ago`});
+        let embed = await embedBuilder(user, redditData, userData.redditUsername);
 
 
         let logMessage;
         if (userData?.redditUsername) {
             interaction.editReply({
                 content: `Changed ${user}'s Reddit username from **u/${userData.redditUsername}** to **u/${username}**`, 
-                ephemeral: true, embeds: [embed]
+                ephemeral: true, 
+                embeds: [embed]
             });
             logMessage = `\`u/${userData.redditUsername}\` → \`u/${username}\``;
             userData.redditUsername = username;
@@ -113,7 +71,8 @@ module.exports = {
         else {
             interaction.editReply({
                 content: `Got it! ${user}'s Reddit username is **u/${username}**`, 
-                ephemeral: true, embeds: [embed]
+                ephemeral: true, 
+                embeds: [embed]
             });
             logMessage = `\`u/${username}\``;
                 
