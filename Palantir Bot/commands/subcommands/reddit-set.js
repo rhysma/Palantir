@@ -41,7 +41,7 @@ module.exports = async (interaction, client) => {
 
 
     // check user's membership in reddit
-    let redditMembership = await checkRedditMembership(userData.redditUsername);
+    let redditMembership = await checkRedditMembership(username);
 
     // build return messages
     let logMessage;

@@ -60,9 +60,9 @@ module.exports = {
         } catch (err) {
             return err.message;
         } 
-
+        console.log(userData)
         // check user's membership in reddit
-        let redditMembership = await checkRedditMembership(userData.redditUsername);
+        let redditMembership = await checkRedditMembership(username);
 
         // build embed
         let embed = await embedBuilder(user, redditData, redditMembership);
