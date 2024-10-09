@@ -62,7 +62,7 @@ async function fetchAndStoreContributors() {
       }
 
       console.log(`Updated ${result.length} contributors in MongoDB.`);
-      await delay(750); // Add delay between requests to respect rate limits
+      await delay(2000); // Add delay between requests to respect rate limits
       attempts = 0; // Reset attempts counter after a successful request
       
     } catch (error) {
