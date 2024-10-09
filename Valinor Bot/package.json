@@ -3,7 +3,7 @@
     "mongodb": "^6.7.0",
     "mongoose": "^8.4.3",
     "node-cron": "^3.0.3",
-    "snoowrap": "^1.23.0",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "axios": "^1.6.5"
   }
 }
