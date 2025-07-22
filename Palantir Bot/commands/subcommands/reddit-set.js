@@ -14,7 +14,21 @@ require('dotenv').config();
 module.exports = async (interaction, client) => {
     await interaction.deferReply({ ephemeral: true });
 
-    const username = interaction.options.getString('username').toLowerCase().replace('u/', '');
+    //const username = interaction.options.getString('username').toLowerCase().replace('u/', '');
+    let rawUsername = interaction.options.getString('username');
+const username = rawUsername
+    .toLowerCase()
+    .trim()
+    .replace(/^u\/?/, '')        // Remove "u/" or "u" if present
+    .replace(/^@/, '');          // Remove leading @ if they paste that too
+
+    if (rawUsername !== username) {
+    await interaction.followUp({
+        content: `ℹ️ It looks like you entered **${rawUsername}** — I’ve cleaned it to **${username}** for you.`,
+        ephemeral: true
+    });
+}
+
     const previousData = await userSchema.findOne({ userId: interaction.user.id });
     const serverData = await serverSchema.findOne({ guildId: interaction.guild?.id });
 
