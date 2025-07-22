@@ -53,11 +53,14 @@ module.exports = async (interaction) => {
         // check user's membership in reddit
         let redditMembership = await checkRedditMembership(userData.redditUsername);
 
+        //requirements that need to be met for membership
+        const passedRequirements = redditData.total_karma >= 100 && redditMembership;
+
         // build embed
         let embed = await embedBuilder(user, redditData, redditMembership);
 
         // Check requirements for role assignment
-        if (redditData.total_karma >= 100 && redditMembership) {
+        if (passedRequirements) {
             // Find the "access" role in the guild
             const guild = interaction.guild;
             const member = await guild.members.fetch(user.id);
@@ -76,18 +79,25 @@ module.exports = async (interaction) => {
             console.log(`Assigned "access" role to ${user.tag}`);
 
             // Notify user via DM
-            try {
-                await user.send(`✅ You have met the requirements and have been granted access to the server! You can now close this ticket.`);
-            } catch (dmErr) {
-                console.warn(`Could not send DM to ${user.tag}:`, dmErr.message);
-            }
-        } else {
-            console.log(`User does not meet requirements: karma=${redditData.total_karma}, membership=${redditMembership}`);
-            return await interaction.editReply({
-                content: `❌ You do not meet the requirements for access. Please contact a moderator for assistance.`,
-                ephemeral: true,
+                try {
+                    await user.send(`✅ You have met the requirements and have been granted access to the server!`);
+                } catch (dmErr) {
+                    console.warn(`Could not send DM to ${user.tag}:`, dmErr.message);
+                }
+            } 
+            else {
+                console.log(`User does not meet requirements: karma=${redditData.total_karma}, membership=${redditMembership}`);
+                return await interaction.editReply({
+                    content: `❌ You do not meet the requirements for access. Please contact a moderator for assistance.`,
+                    ephemeral: true,
+                });
+
+                }
+
+            await interaction.channel.send({
+                content: `🔍 **Reddit Check Results for ${user}**\n` +
+                        `${passedRequirements ? '✅ Access granted! You can now close the ticket and enjoy.' : '❌ Requirements not met. Please contact a moderator.'}`
             });
-        }
 
         // build return message
         interaction.editReply({
