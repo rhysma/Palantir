@@ -20,92 +20,79 @@ require('dotenv').config();
 module.exports = async (interaction) => {
     await interaction.deferReply({ ephemeral: true });
 
-    //only allow run by administrator
+    // Only allow run by administrator
     if (!interaction.memberPermissions?.has('Administrator')) {
-    return await interaction.editReply({
-        content: '❌ You do not have permission to use this command.',
-        ephemeral: true,
-    });
-}
+        return await interaction.editReply({
+            content: '❌ You do not have permission to use this command.',
+            ephemeral: true,
+        });
+    }
 
-    // setup variables 
+    // Setup variables 
     let user = interaction.options.getUser('user');
     let userData = await userSchema.findOne({ userId: user.id });
-   
-    // check if user has link reddit yet
+
+    // Check if user has linked Reddit
     if (!userData?.redditUsername) {
         console.log(`${user} has not linked their Reddit username!`);
         return await interaction.editReply({ content: `${user} has not linked their Reddit username!`, ephemeral: true });
     }
 
     try {
-
         console.log("Reddit Username:", userData.redditUsername);
 
-        // grab userdata from reddit api
+        // Grab user data from Reddit API
         let redditData;
         try {
             redditData = await redditUserCheck(userData.redditUsername, interaction);
         } catch (err) {
-            return err.message;
+            return await interaction.editReply({ content: `Error retrieving Reddit profile.`, ephemeral: true });
         }
 
-        // check user's membership in reddit
+        // Check user's membership in subreddit
         let redditMembership = await checkRedditMembership(userData.redditUsername);
-
-        //requirements that need to be met for membership
         const passedRequirements = redditData.total_karma >= 100 && redditMembership;
 
-        // build embed
+        // Build embed
         let embed = await embedBuilder(user, redditData, redditMembership);
 
-        // Check requirements for role assignment
+        // Always display the embed as an ephemeral reply
+        await interaction.editReply({
+            embeds: [embed],
+            ephemeral: true,
+        });
+
+        // Send public message about access status
         if (passedRequirements) {
-            // Find the "access" role in the guild
+            // Assign "access" role
             const guild = interaction.guild;
             const member = await guild.members.fetch(user.id);
             const accessRole = guild.roles.cache.find(role => role.name.toLowerCase() === 'access');
 
             if (!accessRole) {
                 console.error('Access role not found in the guild.');
-                return await interaction.editReply({
-                    content: 'Reddit data retrieved, but the "access" role was not found in this server.',
-                    ephemeral: true,
+                return await interaction.channel.send({
+                    content: `✅ Reddit check passed for ${user}, but the **access** role is missing from the server.`,
                 });
             }
 
-            // Assign the role to the user
             await member.roles.add(accessRole);
             console.log(`Assigned "access" role to ${user.tag}`);
 
-            // Notify user via DM
-                try {
-                    await user.send(`✅ You have met the requirements and have been granted access to the server!`);
-                } catch (dmErr) {
-                    console.warn(`Could not send DM to ${user.tag}:`, dmErr.message);
-                }
-            } 
-            else {
-                console.log(`User does not meet requirements: karma=${redditData.total_karma}, membership=${redditMembership}`);
-                return await interaction.editReply({
-                    content: `❌ You do not meet the requirements for access. Please contact a moderator for assistance.`,
-                    ephemeral: true,
-                });
-
-                }
-
             await interaction.channel.send({
-                content: `🔍 **Reddit Check Results for ${user}**\n` +
-                        `${passedRequirements ? '✅ Access granted! You can now close the ticket and enjoy.' : '❌ Requirements not met. Please contact a moderator.'}`
+                content: `🔍 **Reddit Check Results for ${user}**\n✅ Access granted! You can now close the ticket and enjoy.`,
             });
+        } else {
+            await interaction.channel.send({
+                content: `🔍 **Reddit Check Results for ${user}**\n❌ Requirements not met. Please contact a moderator.`,
+            });
+        }
 
-        // build return message
-        interaction.editReply({
-            embeds: [embed],
-            ephemeral: true,
-        });
     } catch (error) {
         console.error('Error:', error.message);
-        return interaction.editReply({ content: `Failed to fetch Reddit profile for ${userData.redditUsername}.`, ephemeral: true });
+        return interaction.editReply({
+            content: `❌ Failed to fetch Reddit profile for ${userData.redditUsername}.`,
+            ephemeral: true
+        });
     }
 };

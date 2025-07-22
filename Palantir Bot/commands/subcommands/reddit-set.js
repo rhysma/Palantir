@@ -1,8 +1,7 @@
 const path = require('path');
 const axios = require('axios');
 const fs = require('fs');
-const dotenv = require('dotenv');  // Import dotenv
-
+const dotenv = require('dotenv');
 const { EmbedBuilder } = require('discord.js');
 const request = require('request-promise');
 const serverSchema = require('../../models/serverSchema.js');
@@ -14,77 +13,96 @@ require('dotenv').config();
 
 module.exports = async (interaction, client) => {
     await interaction.deferReply({ ephemeral: true });
-    
-    // // setup variables
-    let username = interaction.options.getString('username').toLowerCase().replace('u/','');
-    let userData = await userSchema.findOne({userId: interaction.user.id});
-    let serverData = await serverSchema.findOne({guildId: interaction.guild?.id});
 
-    // check if username is already set to the same
-    if (username == userData?.redditUsername) {
-        return interaction.editReply({content: `Your username is already set to ${username}!`, ephemeral: true});
+    const username = interaction.options.getString('username').toLowerCase().replace('u/', '');
+    const previousData = await userSchema.findOne({ userId: interaction.user.id });
+    const serverData = await serverSchema.findOne({ guildId: interaction.guild?.id });
+
+    if (username === previousData?.redditUsername) {
+        return interaction.editReply({
+            content: `Your username is already set to ${username}!`,
+            ephemeral: true
+        });
     }
 
-    // check if username is in user by others
-    let existingUser = await userSchema.findOne({ redditUsername: username });
-    if (existingUser) {
-        return interaction.editReply({content: "Someone already has this username! Contact a mod if this is an issue.", ephemeral: true});
+    const existingUser = await userSchema.findOne({ redditUsername: username });
+    if (existingUser && existingUser.userId !== interaction.user.id) {
+        return interaction.editReply({
+            content: "❌ Someone already has this Reddit username! Contact a mod if this is an issue.",
+            ephemeral: true
+        });
     }
-    
-    // grab userdata from reddit api
+
+    // Fetch Reddit data
     let redditData;
     try {
         redditData = await redditUserCheck(username, interaction);
     } catch (err) {
-        return err.message;
-    } 
-
-
-    // check user's membership in reddit
-    let redditMembership = await checkRedditMembership(username);
-
-    // build return messages
-    let logMessage;
-    if (userData?.redditUsername) {
-        interaction.editReply({content: `Changed your Reddit username from **u/${userData.redditUsername}** to **u/${username}**`, ephemeral: true});
-        logMessage = `\`u/${userData.redditUsername}\` → \`u/${username}\``;
-        userData.redditUsername = username;
-    }
-    else {
-        interaction.editReply({content: `Got it! Your Reddit username is **u/${username}**`, ephemeral: true});
-        logMessage = `\`u/${username}\``;
-        
-        userData = await userSchema.create({
-            userId: interaction.user.id,
-            redditUsername: username
+        return interaction.editReply({
+            content: `❌ Error retrieving Reddit profile for u/${username}.`,
+            ephemeral: true
         });
-        console.log(`Created new user schema: ${interaction.user.tag}`);
     }
 
-    // set user role for access
-    /*
-    if (serverData?.redditRole && redditMembership && redditData.total_karma >= 100) {
-        interaction.member?.roles.add(serverData.redditRole);
+    const redditMembership = await checkRedditMembership(username);
+    const passedRequirements = redditData.total_karma >= 100 && redditMembership;
+
+    // Log and reply message
+    const replyContent = previousData?.redditUsername
+        ? `🔁 Changed your Reddit username from **u/${previousData.redditUsername}** to **u/${username}**.`
+        : `✅ Got it! Your Reddit username is now **u/${username}**.`;
+
+    const logMessage = previousData?.redditUsername
+        ? `\`u/${previousData.redditUsername}\` → \`u/${username}\``
+        : `\`u/${username}\``;
+
+    await userSchema.findOneAndUpdate(
+        { userId: interaction.user.id },
+        { redditUsername: username },
+        { upsert: true, new: true }
+    );
+
+    await interaction.editReply({ content: replyContent, ephemeral: true });
+
+    // Assign access role if eligible
+    if (serverData?.redditRole && passedRequirements) {
+        try {
+            const guild = await client.guilds.cache.get(interaction.guild.id);
+            const member = await guild.members.fetch(interaction.user.id);
+            const role = await guild.roles.fetch(serverData.redditRole);
+
+            if (role && member) {
+                await member.roles.add(role);
+                console.log(`✅ Assigned access role to ${interaction.user.tag}`);
+            }
+        } catch (err) {
+            console.error(`❌ Failed to assign role to ${interaction.user.tag}:`, err.message);
+        }
+    } else {
+        console.log(`User ${interaction.user.tag} did not meet requirements (karma: ${redditData.total_karma}, member: ${redditMembership})`);
     }
-    */
 
-    // save userdata to database
-    userData.save();
-
-    // log changes to log channel
-    if (!serverData?.logChannelId) return;
-    const guild = await client.guilds.cache.get(interaction.guild.id);
-    const channel = await guild.channels.fetch(serverData.logChannelId);
-    
-    channel.send({
-        embeds: [
-            new EmbedBuilder()
-                .setAuthor({
-                    name: `${interaction.user.tag} set their Reddit username`, 
-                    iconURL: interaction.user.displayAvatarURL()
-                })
-                .setTitle(logMessage)
-                .setColor('#ff5700')
-        ]
+    // Public message
+    await interaction.channel.send({
+        content: `🔍 **Reddit Check Results for ${interaction.user}**\n` +
+                 `${passedRequirements ? '✅ Access granted! You can now close the ticket and enjoy.' : '❌ Requirements not met. Please contact a moderator.'}`
     });
-}
+
+    // Log message
+    if (serverData?.logChannelId) {
+        const guild = await client.guilds.cache.get(interaction.guild.id);
+        const channel = await guild.channels.fetch(serverData.logChannelId);
+
+        await channel.send({
+            embeds: [
+                new EmbedBuilder()
+                    .setAuthor({
+                        name: `${interaction.user.tag} set their Reddit username`,
+                        iconURL: interaction.user.displayAvatarURL()
+                    })
+                    .setTitle(logMessage)
+                    .setColor('#ff5700')
+            ]
+        });
+    }
+};

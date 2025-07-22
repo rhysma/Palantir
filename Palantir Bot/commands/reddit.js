@@ -6,7 +6,7 @@ module.exports = {
 		.setDescription('Get/set Reddit information')
         .addSubcommand(subcommand => subcommand
             .setName('get')
-            .setDescription('Get Reddit username of a server member')
+            .setDescription('Get Reddit username of a server member (admin only)')
             .addUserOption(option => option
                 .setName('user')
                 .setDescription('The Discord user')

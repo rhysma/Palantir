@@ -40,10 +40,14 @@ const rest = new REST({ version: '10' }).setToken(token);
 	try {
 		console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
+		const guildId = '993998504584286258'; 
+
 		const data = await rest.put(
-			Routes.applicationCommands(clientId),
+			Routes.applicationGuildCommands(clientId, guildId),  // 👈 PER-GUILD
 			{ body: commands },
 		);
+
+		
 
 		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
 	}
