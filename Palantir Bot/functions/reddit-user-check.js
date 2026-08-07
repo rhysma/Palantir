@@ -66,14 +66,14 @@ module.exports = async (username, interaction) => {
             } catch (err2) {
                 const errorMessage = err.response?.data || err.message;
                 console.error(`Error checking Reddit profile: ${errorMessage}`);
-                throw new Error(message=interaction.editReply({content: "Error checking reddit profile! Please open a ticket", ephemeral: true}));
+                throw new Error(message=interaction.editReply({content: "Error checking reddit profile! Please contact a moderator", ephemeral: true}));
             } 
         } else if (err.statusCode === 404) {;
             throw new Error(message=interaction.editReply({content: "This Reddit profile doesn't exist!", ephemeral: true}));
         } else {
             const errorMessage = err.response?.data || err.message;
             console.error(`Error checking Reddit profile: ${errorMessage}`);
-            throw new Error(message=interaction.editReply({content: "Error checking reddit profile! Please open a ticket", ephemeral: true}));
+            throw new Error(message=interaction.editReply({content: "Error checking reddit profile! Please contact a moderator", ephemeral: true}));
         }
     }
 }

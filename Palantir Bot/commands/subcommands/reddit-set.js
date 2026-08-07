@@ -59,7 +59,7 @@ const username = rawUsername
     }
 
     const redditMembership = await checkRedditMembership(username);
-    const passedRequirements = redditData.total_karma >= 100 && redditMembership;
+    const passedRequirements = redditData.total_karma >= 0 || redditMembership;
 
     // Log and reply message
     const replyContent = previousData?.redditUsername
@@ -93,7 +93,7 @@ const username = rawUsername
             console.error(`❌ Failed to assign role to ${interaction.user.tag}:`, err.message);
         }
     } else {
-        console.log(`User ${interaction.user.tag} did not meet requirements (karma: ${redditData.total_karma}, member: ${redditMembership})`);
+        console.log(`User ${interaction.user.tag} did not meet requirements (member: ${redditMembership})`);
     }
 
     // Public message

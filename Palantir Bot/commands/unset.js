@@ -17,7 +17,6 @@ module.exports = {
     async execute(interaction, client) {
         await interaction.deferReply({ ephemeral: true });
 
-        // Ensure only admins can run this (redundant but safe)
         if (!interaction.memberPermissions?.has('Administrator')) {
             return await interaction.editReply({
                 content: '❌ You do not have permission to use this command.',
@@ -26,25 +25,25 @@ module.exports = {
         }
 
         const targetUser = interaction.options.getUser('target');
-        const userData = await userSchema.findOne({ userId: targetUser.id });
+        const userRecord = await userSchema.findOne({ userId: targetUser.id });
 
-        if (!userData?.redditUsername) {
+        if (!userRecord?.redditUsername) {
             return await interaction.editReply({
                 content: `ℹ️ ${targetUser.tag} does not currently have a Reddit username linked.`,
                 ephemeral: true
             });
         }
 
-        const oldUsername = userData.redditUsername;
-        userData.redditUsername = null;
-        await userData.save();
+        const oldUsername = userRecord.redditUsername;
+
+        // ✅ Delete the entire document
+        await userSchema.deleteOne({ userId: targetUser.id });
 
         await interaction.editReply({
-            content: `✅ Successfully unlinked \`u/${oldUsername}\` from ${targetUser.tag}.`,
+            content: `✅ Successfully unlinked \`u/${oldUsername}\` from ${targetUser.tag} and removed their data.`,
             ephemeral: true
         });
 
-        // Log the change if log channel is configured
         const serverData = await serverSchema.findOne({ guildId: interaction.guild?.id });
         if (serverData?.logChannelId) {
             try {
@@ -56,7 +55,7 @@ module.exports = {
                         name: `${interaction.user.tag} unlinked a Reddit account`,
                         iconURL: interaction.user.displayAvatarURL()
                     })
-                    .setDescription(`❌ Unlinked \`u/${oldUsername}\` from ${targetUser.tag}`)
+                    .setDescription(`❌ Unlinked \`u/${oldUsername}\` from ${targetUser.tag} (document deleted)`)
                     .setColor('Red')
                     .setTimestamp();
 
@@ -67,4 +66,3 @@ module.exports = {
         }
     }
 };
-

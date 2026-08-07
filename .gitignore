@@ -1,3 +1,6 @@
 /Palantir Bot/node_modules
 .env
 Palantir Bot/.env.token
+/Valinor Bot/node_modules
+Valinor Bot/package-lock.json
+Valinor Bot/.env.token
