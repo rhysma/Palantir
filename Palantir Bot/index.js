@@ -66,8 +66,11 @@ mongoose.set('strictQuery', false);
 	.catch(err => console.error(err));
 	console.log("Connected to database!");
 
-	client.once('ready', () => console.log(`\nPalantir is now online! ${new Date().toLocaleString()}\n`));
+	client.once('ready', () => {
+		console.log(`\nPalantir is now online! ${new Date().toLocaleString()}\n`);
+
+		// Weekly Reddit membership audit of the access role (dry run unless ROLE_AUDIT_LIVE=true)
+		require('./tasks/roleaudit.js').start(client);
+	});
 	client.login(token);
 })();
-
-
